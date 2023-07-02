@@ -9,12 +9,14 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 
 
 async def start(update: Update, context: CallbackContext):
+    """Обработка команды /start."""
     if update.message:
         await update.message.reply_text('Привет! Я твой бот-помощник!'
                                         ' Задавай мне любые вопросы!')
 
 
 async def get_answer_from_chatgpt(update: Update, context: CallbackContext):
+    """Обработка ответа от ChatGPT."""
     response = openai.Completion.create(
         model=MODEL,
         prompt=update.message.text,
