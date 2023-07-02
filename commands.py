@@ -18,6 +18,6 @@ async def get_answer_from_chatgpt(update: Update, context: CallbackContext):
     response = openai.Completion.create(
         model=MODEL,
         prompt=update.message.text,
-        max_tokens=2000,
+        max_tokens=4000,
     )
     return await update.message.reply_text(response.choices[0].text)
