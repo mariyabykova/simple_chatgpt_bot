@@ -7,7 +7,6 @@ from telegram.ext import CallbackContext
 from dataclasses import dataclass
 
 
-
 CHAT_HISTORY = [
     {
         'role': 'system',
@@ -15,6 +14,7 @@ CHAT_HISTORY = [
     }
 ]
 TOTAL_TOKENS = 4000
+SUM_TOKENS = 0
 
 def update_history(message, role, content):
     CHAT_HISTORY.append({'role': role, 'content': content})
@@ -42,16 +42,20 @@ async def start(update: Update, context: CallbackContext):
 async def get_answer_from_chatgpt(update: Update, context: CallbackContext):
     """Обработка ответа от ChatGPT."""
     try:
+        global SUM_TOKENS
         update_history(CHAT_HISTORY, 'user', update.message.text)
         response = openai.ChatCompletion.create(
             model=MODEL,
             messages=CHAT_HISTORY,
             max_tokens=TOTAL_TOKENS,
         )
-        if response['usage']['total_tokens'] >= TOTAL_TOKENS:
+        SUM_TOKENS += response['usage']['total_tokens']
+        if SUM_TOKENS >= TOTAL_TOKENS:
+            await update.message.reply_text('Вы использовали все токены!'
+                                            'История чата будет очищена.')
             reset_messages()
-            await update.message.reply_text('Вы использовали все токены!')
         return await update.message.reply_text(response.choices[0].message.content)
     except Exception:
         reset_messages()
-        await update.message.reply_text('Ошибка!')
+        await update.message.reply_text('Ошибка! История чата будет очищена!'
+                                        'Попробуйте повторить запрос.')
