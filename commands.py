@@ -11,9 +11,10 @@ from dataclasses import dataclass
 CHAT_HISTORY = [
     {
         'role': 'system',
-        'content': 'You are a programming assistant'
+        'content': 'You are a programming assistant',
     }
 ]
+TOTAL_TOKENS = 4000
 
 def update_history(message, role, content):
     CHAT_HISTORY.append({'role': role, 'content': content})
@@ -45,11 +46,11 @@ async def get_answer_from_chatgpt(update: Update, context: CallbackContext):
         response = openai.ChatCompletion.create(
             model=MODEL,
             messages=CHAT_HISTORY,
-            max_tokens=4000,
+            max_tokens=TOTAL_TOKENS,
         )
-        if response['usage']['total_tokens'] >= 4000:
-            await update.message.reply_text('Вы использовали все токены!')
+        if response['usage']['total_tokens'] >= TOTAL_TOKENS:
             reset_messages()
+            await update.message.reply_text('Вы использовали все токены!')
         return await update.message.reply_text(response.choices[0].message.content)
     except Exception:
         reset_messages()
