@@ -3,10 +3,14 @@ import os
 
 from dotenv import load_dotenv
 import openai
-from telegram.ext import (ApplicationBuilder, CommandHandler,
+from telegram.ext import (ApplicationBuilder, ConversationHandler,
+                          CommandHandler,
                           filters, MessageHandler)
 
-from commands import count_tokens, get_answer_from_chatgpt, reset, start
+from commands import (count_tokens, enter_password,
+                      get_answer_from_chatgpt,
+                      reset, start,
+                      PASSWORD)
 
 
 load_dotenv()
@@ -23,7 +27,11 @@ logging.basicConfig(
 def main():
     """Основная логика работы бота."""
     application = ApplicationBuilder().token(BOT_TOKEN).build()
-    application.add_handler(CommandHandler('start', start))
+    application.add_handler(ConversationHandler(
+        entry_points=[CommandHandler('start', start)],
+        states={PASSWORD: [MessageHandler(filters.TEXT & ~filters.COMMAND, enter_password)]},
+        fallbacks=[]
+    ))
     application.add_handler(CommandHandler('reset', reset))
     application.add_handler(CommandHandler('tokens', count_tokens))
     application.add_handler(MessageHandler(

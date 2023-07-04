@@ -1,9 +1,12 @@
 import openai
 import os
 from telegram import ReplyKeyboardMarkup, Update
-from telegram.ext import CallbackContext
+from telegram.ext import CallbackContext, ConversationHandler
 
 
+ALLOWED_VISITORS = []
+PASSWORD = 0
+SECRET_PASSWORD = os.getenv('SECRET_PASSWORD', 'secret')
 CHAT_HISTORY = [
     {
         'role': 'system',
@@ -33,14 +36,37 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 async def start(update: Update, context: CallbackContext):
     """Обработка команды /start."""
     if update.message:
-        button = ReplyKeyboardMarkup([['/reset', '/tokens']],
+        if update.message.chat.id in ALLOWED_VISITORS:
+            button = ReplyKeyboardMarkup([['/reset', '/tokens']],
                                  resize_keyboard=True)
+            await update.message.reply_text(
+                f'Привет, {update.message.chat.first_name}!'
+                f' Я твой бот-помощник!'
+                f' Задавай мне любые вопросы!',
+                reply_markup=button
+            )
+        else:
+            await update.message.reply_text(
+                f'Введите пароль!'
+            )
+            return PASSWORD
+
+
+async def enter_password(update: Update, context: CallbackContext):
+    password = update.message.text
+    if password == SECRET_PASSWORD:
+        ALLOWED_VISITORS.append(update.message.chat.id)
         await update.message.reply_text(
-            f'Привет, {update.message.chat.first_name}!'
-            f' Я твой бот-помощник!'
-            f' Задавай мне любые вопросы!',
-            reply_markup=button
+            'Пароль верный. Можете начинать работу.'
         )
+        return ConversationHandler.END
+    else:
+        await update.message.reply_text(
+        'Пароль неверный. Вы не можете пользоваться ботом.'
+        )
+        print(SECRET_PASSWORD)
+        print(password)
+    
 
 
 async def reset(update: Update, context: CallbackContext):
