@@ -109,6 +109,7 @@ async def get_answer_from_chatgpt(update: Update, context: CallbackContext):
                 messages=CHAT_HISTORY,
                 max_tokens=TOTAL_TOKENS,
             )
+            update_history(CHAT_HISTORY, 'assistant', response.choices[0].message.content)
             print(CHAT_HISTORY)
             SUM_TOKENS += response['usage']['total_tokens']
             if SUM_TOKENS >= TOTAL_TOKENS:
