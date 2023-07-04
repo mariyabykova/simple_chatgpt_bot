@@ -35,17 +35,25 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 async def start(update: Update, context: CallbackContext):
     """Обработка команды /start."""
     if update.message:
-        button = ReplyKeyboardMarkup([['/reset']],
+        button = ReplyKeyboardMarkup([['/reset', '/tokens']],
                                  resize_keyboard=True)
-        await update.message.reply_text(f'Привет, {update.message.chat.first_name}!'
-                                        f' Я твой бот-помощник!'
-                                        f' Задавай мне любые вопросы!',
-                                        reply_markup=button)
+        await update.message.reply_text(
+            f'Привет, {update.message.chat.first_name}!'
+            f' Я твой бот-помощник!'
+            f' Задавай мне любые вопросы!',
+            reply_markup=button
+        )
 
 
 async def reset(update: Update, context: CallbackContext):
     reset_messages()
     await update.message.reply_text('История чата была очищена.')
+
+
+async def count_tokens(update: Update, context: CallbackContext):
+    await update.message.reply_text(
+        f'Ваш остаток токенов: {TOTAL_TOKENS - SUM_TOKENS}',
+    )
 
 
 async def get_answer_from_chatgpt(update: Update, context: CallbackContext):
@@ -59,9 +67,6 @@ async def get_answer_from_chatgpt(update: Update, context: CallbackContext):
             max_tokens=TOTAL_TOKENS,
         )
         SUM_TOKENS += response['usage']['total_tokens']
-        print(CHAT_HISTORY)
-        print(SUM_TOKENS)
-        print(response['usage']['total_tokens'])
         if SUM_TOKENS >= TOTAL_TOKENS:
             await update.message.reply_text('Вы использовали все токены!'
                                             ' История чата будет очищена.')
