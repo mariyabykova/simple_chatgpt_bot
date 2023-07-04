@@ -1,6 +1,6 @@
 import openai
 import os
-from telegram import Update
+from telegram import ReplyKeyboardMarkup, Update
 from telegram.ext import CallbackContext
 
 from dataclasses import dataclass
@@ -35,8 +35,12 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 async def start(update: Update, context: CallbackContext):
     """Обработка команды /start."""
     if update.message:
-        await update.message.reply_text('Привет! Я твой бот-помощник!'
-                                        ' Задавай мне любые вопросы!')
+        button = ReplyKeyboardMarkup([['/reset']],
+                                 resize_keyboard=True)
+        await update.message.reply_text(f'Привет, {update.message.chat.first_name}!'
+                                        f' Я твой бот-помощник!'
+                                        f' Задавай мне любые вопросы!',
+                                        reply_markup=button)
 
 
 async def reset(update: Update, context: CallbackContext):
