@@ -6,7 +6,8 @@ from dotenv import load_dotenv
 import openai
 from telegram import ReplyKeyboardMarkup, Update
 from telegram.ext import CallbackContext, ConversationHandler
-import tiktoken
+
+from utils import count_num_tokens, reset_messages, update_history
 
 
 load_dotenv()
@@ -32,24 +33,6 @@ PASSWORD = 0
 SECRET_PASSWORD = os.getenv('SECRET_PASSWORD')
 SUM_TOKENS = 0
 TOTAL_TOKENS = 3500
-
-
-def count_num_tokes(string, encoding_name):
-    """Вспомогательная функция для подсчёта токенов в тексте,
-    который вводит пользователь."""
-    encoding = tiktoken.get_encoding(encoding_name)
-    num_tokens = len(encoding.encode(string))
-    return num_tokens
-
-def update_history(message, role, content):
-    """Вспомогательная функция для обновления истории чата."""
-    CHAT_HISTORY.append({'role': role, 'content': content})
-
-
-def reset_messages():
-    """Вспомогательная функция для очистки истории чата."""
-    CHAT_HISTORY.clear()
-    CHAT_HISTORY.append(CHAT_OBJECT)
 
 
 def check_users(user_id):
@@ -98,7 +81,7 @@ async def enter_password(update: Update, context: CallbackContext):
 async def reset(update: Update, context: CallbackContext):
     """Очистка истории чата. Команда /reset."""
     if check_users(update.message.chat.id):
-        reset_messages()
+        reset_messages(CHAT_HISTORY, CHAT_OBJECT)
         await update.message.reply_text('История чата была очищена.')
     else:
         await update.message.reply_text(AUTHORIZATION_ERROR_MESSAGE)
@@ -119,7 +102,7 @@ async def get_answer_from_chatgpt(update: Update, context: CallbackContext):
     if check_users(update.message.chat.id):
         try:
             global SUM_TOKENS
-            if count_num_tokes(update.message.text, 'cl100k_base') >= 500:
+            if count_num_tokens(update.message.text, 'cl100k_base') >= 500:
                 return await update.message.reply_text(
                     'Вы использовали слишком много токенов.'
                     ' Сократите запрос.'
@@ -132,19 +115,18 @@ async def get_answer_from_chatgpt(update: Update, context: CallbackContext):
             )
             update_history(CHAT_HISTORY, 'assistant',
                            response.choices[0].message.content)
-            print(CHAT_HISTORY)
-            print(response['usage']['prompt_tokens'])
             SUM_TOKENS += response['usage']['total_tokens']
+            print(CHAT_HISTORY)
             if SUM_TOKENS >= TOTAL_TOKENS:
                 await update.message.reply_text('Вы использовали все токены!'
                                                 ' История чата будет очищена.')
-                reset_messages()
+                reset_messages(CHAT_HISTORY, CHAT_OBJECT)
             return await update.message.reply_text(
                 response.choices[0].message.content
             )
         except Exception as error:
             logger.error(f'{error}')
-            reset_messages()
+            reset_messages(CHAT_HISTORY, CHAT_OBJECT)
             await update.message.reply_text('Ошибка! История чата будет очищена!'
                                             ' Попробуйте повторить запрос.')
     else:
