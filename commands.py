@@ -13,6 +13,7 @@ AUTHORIZATION_ERROR_MESSAGE = ('Вы не имеете права пользов
                                ' Выполните команду /start,'
                                ' а затем введите пароль.')
 ALLOWED_VISITORS = []
+MODEL = 'gpt-3.5-turbo'
 PASSWORD = 0
 SECRET_PASSWORD = os.getenv('SECRET_PASSWORD')
 CHAT_HISTORY = [
@@ -26,10 +27,12 @@ TOTAL_TOKENS = 4000
 
 
 def update_history(message, role, content):
+    """Вспомогательная функция для обновления истории чата."""
     CHAT_HISTORY.append({'role': role, 'content': content})
 
 
 def reset_messages():
+    """Вспомогательная функция для очистки истории чата."""
     CHAT_HISTORY.clear()
     CHAT_HISTORY.append({
         'role': 'system',
@@ -38,12 +41,9 @@ def reset_messages():
 
 
 def check_users(user_id):
+    """Вспомогательная функция для проверки прав доступа пользователя."""
     if user_id in ALLOWED_VISITORS:
         return True
-
-
-MODEL = 'gpt-3.5-turbo'
-openai.api_key = os.getenv('OPENAI_API_KEY')
 
 
 async def start(update: Update, context: CallbackContext):
@@ -66,6 +66,7 @@ async def start(update: Update, context: CallbackContext):
 
 
 async def enter_password(update: Update, context: CallbackContext):
+    """Ввод пароля для начала работы."""
     password = update.message.text
     if password == SECRET_PASSWORD:
         ALLOWED_VISITORS.append(update.message.chat.id)
@@ -80,6 +81,7 @@ async def enter_password(update: Update, context: CallbackContext):
 
 
 async def reset(update: Update, context: CallbackContext):
+    """Очистка истории чата."""
     if check_users(update.message.chat.id):
         reset_messages()
         await update.message.reply_text('История чата была очищена.')
@@ -87,16 +89,14 @@ async def reset(update: Update, context: CallbackContext):
         await update.message.reply_text(AUTHORIZATION_ERROR_MESSAGE)
 
 
-
-
 async def count_tokens(update: Update, context: CallbackContext):
+    """Подсчёт количества оставшихся токенов."""
     if check_users(update.message.chat.id):
         await update.message.reply_text(
             f'Ваш остаток токенов: {TOTAL_TOKENS - SUM_TOKENS}',
         )
     else:
         await update.message.reply_text(AUTHORIZATION_ERROR_MESSAGE)
-
 
 
 async def get_answer_from_chatgpt(update: Update, context: CallbackContext):
@@ -115,7 +115,9 @@ async def get_answer_from_chatgpt(update: Update, context: CallbackContext):
                 await update.message.reply_text('Вы использовали все токены!'
                                                 ' История чата будет очищена.')
                 reset_messages()
-            return await update.message.reply_text(response.choices[0].message.content)
+            return await update.message.reply_text(
+                response.choices[0].message.content
+            )
         except Exception:
             reset_messages()
             await update.message.reply_text('Ошибка! История чата будет очищена!'
