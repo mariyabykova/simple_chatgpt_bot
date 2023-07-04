@@ -3,8 +3,6 @@ import os
 from telegram import ReplyKeyboardMarkup, Update
 from telegram.ext import CallbackContext
 
-from dataclasses import dataclass
-
 
 CHAT_HISTORY = [
     {
@@ -12,8 +10,8 @@ CHAT_HISTORY = [
         'content': 'You are a programming assistant',
     }
 ]
-TOTAL_TOKENS = 4000
 SUM_TOKENS = 0
+TOTAL_TOKENS = 4000
 
 
 def update_history(message, role, content):
