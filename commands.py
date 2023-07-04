@@ -1,12 +1,17 @@
-import openai
 import os
+
+from dotenv import load_dotenv
+import openai
 from telegram import ReplyKeyboardMarkup, Update
 from telegram.ext import CallbackContext, ConversationHandler
 
 
+load_dotenv()
+
+
 ALLOWED_VISITORS = []
 PASSWORD = 0
-SECRET_PASSWORD = os.getenv('SECRET_PASSWORD', 'secret')
+SECRET_PASSWORD = os.getenv('SECRET_PASSWORD')
 CHAT_HISTORY = [
     {
         'role': 'system',
@@ -64,9 +69,6 @@ async def enter_password(update: Update, context: CallbackContext):
         await update.message.reply_text(
         'Пароль неверный. Вы не можете пользоваться ботом.'
         )
-        print(SECRET_PASSWORD)
-        print(password)
-    
 
 
 async def reset(update: Update, context: CallbackContext):

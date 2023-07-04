@@ -16,6 +16,7 @@ from commands import (count_tokens, enter_password,
 load_dotenv()
 
 BOT_TOKEN = os.getenv('BOT_TOKEN')
+SECRET_PASSWORD = os.getenv('SECRET_PASSWORD')
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
 
