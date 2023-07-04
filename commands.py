@@ -9,6 +9,9 @@ from telegram.ext import CallbackContext, ConversationHandler
 load_dotenv()
 
 
+AUTHORIZATION_ERROR_MESSAGE = ('Вы не имеете права пользоваться ботом.'
+                               ' Выполните команду /start,'
+                               ' а затем введите пароль.')
 ALLOWED_VISITORS = []
 PASSWORD = 0
 SECRET_PASSWORD = os.getenv('SECRET_PASSWORD')
@@ -32,6 +35,11 @@ def reset_messages():
         'role': 'system',
         'content': 'You are a programming assistant'
     })
+
+
+def check_users(user_id):
+    if user_id in ALLOWED_VISITORS:
+        return True
 
 
 MODEL = 'gpt-3.5-turbo'
@@ -72,33 +80,45 @@ async def enter_password(update: Update, context: CallbackContext):
 
 
 async def reset(update: Update, context: CallbackContext):
-    reset_messages()
-    await update.message.reply_text('История чата была очищена.')
+    if check_users(update.message.chat.id):
+        reset_messages()
+        await update.message.reply_text('История чата была очищена.')
+    else:
+        await update.message.reply_text(AUTHORIZATION_ERROR_MESSAGE)
+
+
 
 
 async def count_tokens(update: Update, context: CallbackContext):
-    await update.message.reply_text(
-        f'Ваш остаток токенов: {TOTAL_TOKENS - SUM_TOKENS}',
-    )
+    if check_users(update.message.chat.id):
+        await update.message.reply_text(
+            f'Ваш остаток токенов: {TOTAL_TOKENS - SUM_TOKENS}',
+        )
+    else:
+        await update.message.reply_text(AUTHORIZATION_ERROR_MESSAGE)
+
 
 
 async def get_answer_from_chatgpt(update: Update, context: CallbackContext):
     """Обработка ответа от ChatGPT."""
-    try:
-        global SUM_TOKENS
-        update_history(CHAT_HISTORY, 'user', update.message.text)
-        response = openai.ChatCompletion.create(
-            model=MODEL,
-            messages=CHAT_HISTORY,
-            max_tokens=TOTAL_TOKENS,
-        )
-        SUM_TOKENS += response['usage']['total_tokens']
-        if SUM_TOKENS >= TOTAL_TOKENS:
-            await update.message.reply_text('Вы использовали все токены!'
-                                            ' История чата будет очищена.')
+    if check_users(update.message.chat.id):
+        try:
+            global SUM_TOKENS
+            update_history(CHAT_HISTORY, 'user', update.message.text)
+            response = openai.ChatCompletion.create(
+                model=MODEL,
+                messages=CHAT_HISTORY,
+                max_tokens=TOTAL_TOKENS,
+            )
+            SUM_TOKENS += response['usage']['total_tokens']
+            if SUM_TOKENS >= TOTAL_TOKENS:
+                await update.message.reply_text('Вы использовали все токены!'
+                                                ' История чата будет очищена.')
+                reset_messages()
+            return await update.message.reply_text(response.choices[0].message.content)
+        except Exception:
             reset_messages()
-        return await update.message.reply_text(response.choices[0].message.content)
-    except Exception:
-        reset_messages()
-        await update.message.reply_text('Ошибка! История чата будет очищена!'
-                                        ' Попробуйте повторить запрос.')
+            await update.message.reply_text('Ошибка! История чата будет очищена!'
+                                            ' Попробуйте повторить запрос.')
+    else:
+        await update.message.reply_text(AUTHORIZATION_ERROR_MESSAGE)

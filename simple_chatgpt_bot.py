@@ -30,7 +30,9 @@ def main():
     application = ApplicationBuilder().token(BOT_TOKEN).build()
     application.add_handler(ConversationHandler(
         entry_points=[CommandHandler('start', start)],
-        states={PASSWORD: [MessageHandler(filters.TEXT & ~filters.COMMAND, enter_password)]},
+        states={PASSWORD: [
+            MessageHandler(filters.TEXT & ~filters.COMMAND,enter_password)
+        ]},
         fallbacks=[]
     ))
     application.add_handler(CommandHandler('reset', reset))
