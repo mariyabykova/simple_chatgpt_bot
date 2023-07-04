@@ -1,6 +1,12 @@
 import tiktoken
 
 
+def check_users(user_id, user_list):
+    """Вспомогательная функция для проверки прав доступа пользователя."""
+    if user_id in user_list:
+        return True
+
+
 def count_num_tokens(string, encoding_name):
     """Вспомогательная функция для подсчёта токенов в тексте,
     который вводит пользователь."""

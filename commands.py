@@ -7,7 +7,7 @@ import openai
 from telegram import ReplyKeyboardMarkup, Update
 from telegram.ext import CallbackContext, ConversationHandler
 
-from utils import count_num_tokens, reset_messages, update_history
+from utils import check_users, count_num_tokens, reset_messages, update_history
 
 
 load_dotenv()
@@ -35,16 +35,10 @@ SUM_TOKENS = 0
 TOTAL_TOKENS = 3500
 
 
-def check_users(user_id):
-    """Вспомогательная функция для проверки прав доступа пользователя."""
-    if user_id in ALLOWED_VISITORS:
-        return True
-
-
 async def start(update: Update, context: CallbackContext):
     """Обработка команды /start."""
     if update.message:
-        if update.message.chat.id in ALLOWED_VISITORS:
+        if check_users(update.message.chat.id, ALLOWED_VISITORS):
             button = ReplyKeyboardMarkup([['/reset', '/tokens']],
                                  resize_keyboard=True)
             await update.message.reply_text(
@@ -80,7 +74,7 @@ async def enter_password(update: Update, context: CallbackContext):
 
 async def reset(update: Update, context: CallbackContext):
     """Очистка истории чата. Команда /reset."""
-    if check_users(update.message.chat.id):
+    if check_users(update.message.chat.id, ALLOWED_VISITORS):
         reset_messages(CHAT_HISTORY, CHAT_OBJECT)
         await update.message.reply_text('История чата была очищена.')
     else:
@@ -89,7 +83,7 @@ async def reset(update: Update, context: CallbackContext):
 
 async def count_tokens(update: Update, context: CallbackContext):
     """Подсчёт количества оставшихся токенов. Команда /tokens"""
-    if check_users(update.message.chat.id):
+    if check_users(update.message.chat.id, ALLOWED_VISITORS):
         await update.message.reply_text(
             f'Ваш остаток токенов: {TOTAL_TOKENS - SUM_TOKENS}',
         )
@@ -99,7 +93,7 @@ async def count_tokens(update: Update, context: CallbackContext):
 
 async def get_answer_from_chatgpt(update: Update, context: CallbackContext):
     """Обработка ответа от ChatGPT."""
-    if check_users(update.message.chat.id):
+    if check_users(update.message.chat.id, ALLOWED_VISITORS):
         try:
             global SUM_TOKENS
             if count_num_tokens(update.message.text, 'cl100k_base') >= 500:
