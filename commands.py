@@ -28,6 +28,11 @@ CHAT_OBJECT = {
     'content': 'You are a bot-assistant'
 }
 CHAT_HISTORY = [CHAT_OBJECT]
+GREETING_MESSAGE = (
+    f' Задавай мне любые вопросы!'
+    f' Очистить историю поиска можно командой /reset.'
+    f' Посмотреть остаток токенов после запроса можно командой /tokens'
+)
 MODEL = 'gpt-3.5-turbo'
 PASSWORD = 0
 SECRET_PASSWORD = os.getenv('SECRET_PASSWORD')
@@ -39,12 +44,13 @@ async def start(update: Update, context: CallbackContext):
     """Обработка команды /start."""
     if update.message:
         if check_users(update.message.chat.id, ALLOWED_VISITORS):
-            button = ReplyKeyboardMarkup([['/reset', '/tokens']],
-                                 resize_keyboard=True)
+            button = ReplyKeyboardMarkup(
+                [['/reset', '/tokens']], resize_keyboard=True
+            )
             await update.message.reply_text(
                 f'Привет, {update.message.chat.first_name}!'
                 f' Я твой бот-помощник!'
-                f' Задавай мне любые вопросы!',
+                f' {GREETING_MESSAGE}',
                 reply_markup=button
             )
         else:
@@ -59,11 +65,14 @@ async def enter_password(update: Update, context: CallbackContext):
     password = update.message.text
     if password == SECRET_PASSWORD:
         ALLOWED_VISITORS.append(update.message.chat.id)
+        button = ReplyKeyboardMarkup(
+            [['/reset', '/tokens']], resize_keyboard=True
+        )
         await update.message.reply_text(
-            'Пароль верный. Я готов к работе с тобой!'
-            ' Можешь задавать мне любые вопросы.'
-            ' Очистить историю поиска можно командой /reset.'
-            ' Посмотреть остаток токенов после запроса можно командой /tokens'
+            f'Пароль верный. Я готов к работе с тобой,'
+            f' {update.message.chat.first_name}!'
+            f' {GREETING_MESSAGE}',
+            reply_markup=button
         )
         return ConversationHandler.END
     else:
@@ -96,7 +105,7 @@ async def get_answer_from_chatgpt(update: Update, context: CallbackContext):
     if check_users(update.message.chat.id, ALLOWED_VISITORS):
         try:
             global SUM_TOKENS
-            if count_num_tokens(update.message.text, 'cl100k_base') >= 500:
+            if count_num_tokens(update.message.text, 'cl100k_base') >= 300:
                 return await update.message.reply_text(
                     'Вы использовали слишком много токенов.'
                     ' Сократите запрос.'
@@ -111,6 +120,7 @@ async def get_answer_from_chatgpt(update: Update, context: CallbackContext):
                            response.choices[0].message.content)
             SUM_TOKENS += response['usage']['total_tokens']
             print(CHAT_HISTORY)
+            print(SUM_TOKENS)
             if SUM_TOKENS >= TOTAL_TOKENS:
                 await update.message.reply_text('Вы использовали все токены!'
                                                 ' История чата будет очищена.')
