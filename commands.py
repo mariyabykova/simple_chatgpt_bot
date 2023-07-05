@@ -46,6 +46,8 @@ async def start(update: Update, context: CallbackContext):
     """Обработка команды /start."""
     if update.message:
         if check_users(update.message.chat.id, ALLOWED_VISITORS):
+            logger.info(f'Пользователь {update.message.chat.first_name}'
+                        f' начал работу с ботом.')
             button = ReplyKeyboardMarkup(
                 [['/reset', '/tokens']], resize_keyboard=True
             )
@@ -66,6 +68,8 @@ async def enter_password(update: Update, context: CallbackContext):
     """Ввод пароля для начала работы."""
     password = update.message.text
     if password == SECRET_PASSWORD:
+        logger.info(f'Пользователь {update.message.chat.first_name}'
+                        f' начал работу с ботом.')
         ALLOWED_VISITORS.append(update.message.chat.id)
         button = ReplyKeyboardMarkup(
             [['/reset', '/tokens']], resize_keyboard=True
@@ -78,6 +82,8 @@ async def enter_password(update: Update, context: CallbackContext):
         )
         return ConversationHandler.END
     else:
+        logger.info(f'Пользователь {update.message.chat.first_name}'
+                        f' ввёл неверный пароль.')
         await update.message.reply_text(
         'Пароль неверный. Вы не можете пользоваться ботом.'
         )
@@ -86,6 +92,7 @@ async def enter_password(update: Update, context: CallbackContext):
 async def reset(update: Update, context: CallbackContext):
     """Очистка истории чата. Команда /reset."""
     if check_users(update.message.chat.id, ALLOWED_VISITORS):
+        logger.info(f'История чата была очищена.')
         reset_messages(CHAT_HISTORY, CHAT_OBJECT)
         await update.message.reply_text('История чата была очищена.')
     else:
@@ -95,6 +102,9 @@ async def reset(update: Update, context: CallbackContext):
 async def count_tokens(update: Update, context: CallbackContext):
     """Подсчёт количества оставшихся токенов. Команда /tokens"""
     if check_users(update.message.chat.id, ALLOWED_VISITORS):
+        logger.info(f'Пользователь {update.message.chat.first_name}'
+                    f' запросил остаток токенов:'
+                    f' {TOTAL_TOKENS - SUM_TOKENS}')
         await update.message.reply_text(
             f'Ваш остаток токенов: {TOTAL_TOKENS - SUM_TOKENS}',
         )
@@ -107,12 +117,19 @@ async def get_answer_from_chatgpt(update: Update, context: CallbackContext):
     if check_users(update.message.chat.id, ALLOWED_VISITORS):
         try:
             global SUM_TOKENS
-            if count_num_tokens(update.message.text, 'cl100k_base') >= MAX_PROMPT_LENGTH:
+            if count_num_tokens(update.message.text,
+                                'cl100k_base') >= MAX_PROMPT_LENGTH:
+                logger.info(f'Пользователь {update.message.chat.first_name}'
+                        f' отправил слишком длинный запрос боту.'
+                        f' Пользователю отправлено предупреждение.')
                 return await update.message.reply_text(
                     'Вы использовали слишком много токенов.'
                     ' Сократите запрос.'
                 )
             update_history(CHAT_HISTORY, 'user', update.message.text)
+            logger.info(f'Пользователь {update.message.chat.first_name}'
+                        f' отправил запрос боту:'
+                        f' {update.message.text}')
             response = openai.ChatCompletion.create(
                 model=MODEL,
                 messages=CHAT_HISTORY,
@@ -125,6 +142,8 @@ async def get_answer_from_chatgpt(update: Update, context: CallbackContext):
                 await update.message.reply_text('Вы использовали слишком много токенов!'
                                                 ' История чата будет очищена.')
                 reset_messages(CHAT_HISTORY, CHAT_OBJECT)
+            logger.info(f'Получен ответ от бота:'
+                        f' {response.choices[0].message.content}')
             return await update.message.reply_text(
                 response.choices[0].message.content
             )
