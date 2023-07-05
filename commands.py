@@ -92,8 +92,10 @@ async def enter_password(update: Update, context: CallbackContext):
 async def reset(update: Update, context: CallbackContext):
     """Очистка истории чата. Команда /reset."""
     if check_users(update.message.chat.id, ALLOWED_VISITORS):
+        global SUM_TOKENS
         logger.info(f'История чата была очищена.')
         reset_messages(CHAT_HISTORY, CHAT_OBJECT)
+        SUM_TOKENS = 0
         await update.message.reply_text('История чата была очищена.')
     else:
         await update.message.reply_text(AUTHORIZATION_ERROR_MESSAGE)
@@ -106,7 +108,8 @@ async def count_tokens(update: Update, context: CallbackContext):
                     f' запросил остаток токенов:'
                     f' {TOTAL_TOKENS - SUM_TOKENS}')
         await update.message.reply_text(
-            f'Ваш остаток токенов: {TOTAL_TOKENS - SUM_TOKENS}',
+            f'Ваш остаток токенов:'
+            f'{TOTAL_TOKENS -MAX_COMPLETION_LENGTH - SUM_TOKENS}',
         )
     else:
         await update.message.reply_text(AUTHORIZATION_ERROR_MESSAGE)
@@ -138,10 +141,13 @@ async def get_answer_from_chatgpt(update: Update, context: CallbackContext):
             update_history(CHAT_HISTORY, 'assistant',
                            response.choices[0].message.content)
             SUM_TOKENS += response['usage']['total_tokens']
-            if SUM_TOKENS >= MAX_COMPLETION_LENGTH:
-                await update.message.reply_text('Вы использовали слишком много токенов!'
-                                                ' История чата будет очищена.')
+            if SUM_TOKENS >= TOTAL_TOKENS - MAX_COMPLETION_LENGTH:
+                await update.message.reply_text(
+                    'Вы использовали слишком много токенов!'
+                    ' История чата будет очищена.'
+                )
                 reset_messages(CHAT_HISTORY, CHAT_OBJECT)
+                SUM_TOKENS = 0
             logger.info(f'Получен ответ от бота:'
                         f' {response.choices[0].message.content}')
             return await update.message.reply_text(
@@ -150,7 +156,10 @@ async def get_answer_from_chatgpt(update: Update, context: CallbackContext):
         except Exception as error:
             logger.error(f'{error}')
             reset_messages(CHAT_HISTORY, CHAT_OBJECT)
-            await update.message.reply_text('Ошибка! История чата будет очищена!'
-                                            ' Попробуйте повторить запрос.')
+            SUM_TOKENS = 0
+            await update.message.reply_text(
+                'Ошибка! История чата будет очищена!'
+                ' Попробуйте повторить запрос.'
+            )
     else:
         await update.message.reply_text(AUTHORIZATION_ERROR_MESSAGE)
