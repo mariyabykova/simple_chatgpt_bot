@@ -1,6 +1,11 @@
 import tiktoken
 
 
+def check_tokens(token_list):
+    """Вспомогательная функция для проверки наличия токенов."""
+    return all(token_list)
+
+
 def check_users(user_id, user_list):
     """Вспомогательная функция для проверки прав доступа пользователя."""
     if user_id in user_list:

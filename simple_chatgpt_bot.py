@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 
 from dotenv import load_dotenv
 import openai
@@ -11,6 +12,7 @@ from commands import (count_tokens, enter_password,
                       get_answer_from_chatgpt,
                       reset, start,
                       PASSWORD)
+from utils import check_tokens
 
 
 load_dotenv()
@@ -23,10 +25,15 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.StreamHandler(sys.stdout))
 
 
 def main():
     """Основная логика работы бота."""
+    if not check_tokens([BOT_TOKEN, openai.api_key]):
+        logger.critical('Токены не найдены. Программа прервана.')
+        raise ValueError('Токены не найдены')
     application = ApplicationBuilder().token(BOT_TOKEN).build()
     application.add_handler(ConversationHandler(
         entry_points=[CommandHandler('start', start)],
