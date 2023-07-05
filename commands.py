@@ -33,11 +33,13 @@ GREETING_MESSAGE = (
     f' Очистить историю поиска можно командой /reset.'
     f' Посмотреть остаток токенов после запроса можно командой /tokens'
 )
+MAX_PROMPT_LENGTH = 300
+MAX_COMPLETION_LENGTH = 3000
 MODEL = 'gpt-3.5-turbo'
 PASSWORD = 0
 SECRET_PASSWORD = os.getenv('SECRET_PASSWORD')
 SUM_TOKENS = 0
-TOTAL_TOKENS = 3500
+TOTAL_TOKENS = 4000
 
 
 async def start(update: Update, context: CallbackContext):
@@ -105,7 +107,7 @@ async def get_answer_from_chatgpt(update: Update, context: CallbackContext):
     if check_users(update.message.chat.id, ALLOWED_VISITORS):
         try:
             global SUM_TOKENS
-            if count_num_tokens(update.message.text, 'cl100k_base') >= 300:
+            if count_num_tokens(update.message.text, 'cl100k_base') >= MAX_PROMPT_LENGTH:
                 return await update.message.reply_text(
                     'Вы использовали слишком много токенов.'
                     ' Сократите запрос.'
@@ -114,15 +116,13 @@ async def get_answer_from_chatgpt(update: Update, context: CallbackContext):
             response = openai.ChatCompletion.create(
                 model=MODEL,
                 messages=CHAT_HISTORY,
-                max_tokens=TOTAL_TOKENS,
+                max_tokens=MAX_COMPLETION_LENGTH,
             )
             update_history(CHAT_HISTORY, 'assistant',
                            response.choices[0].message.content)
             SUM_TOKENS += response['usage']['total_tokens']
-            print(CHAT_HISTORY)
-            print(SUM_TOKENS)
-            if SUM_TOKENS >= TOTAL_TOKENS:
-                await update.message.reply_text('Вы использовали все токены!'
+            if SUM_TOKENS >= MAX_COMPLETION_LENGTH:
+                await update.message.reply_text('Вы использовали слишком много токенов!'
                                                 ' История чата будет очищена.')
                 reset_messages(CHAT_HISTORY, CHAT_OBJECT)
             return await update.message.reply_text(
