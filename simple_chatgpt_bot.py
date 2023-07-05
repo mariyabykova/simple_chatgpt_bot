@@ -31,7 +31,7 @@ def main():
     application.add_handler(ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={PASSWORD: [
-            MessageHandler(filters.TEXT & ~filters.COMMAND,enter_password)
+            MessageHandler(filters.TEXT & ~filters.COMMAND, enter_password)
         ]},
         fallbacks=[]
     ))
