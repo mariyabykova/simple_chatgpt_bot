@@ -7,14 +7,17 @@ import openai
 from telegram import ReplyKeyboardMarkup, Update
 from telegram.ext import CallbackContext, ConversationHandler
 
-from utils import check_users, count_num_tokens, reset_messages, update_history
+from utils import check_users, count_num_tokens, reset_messages, update_history, delete_old_message
 
 
 load_dotenv()
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO)
+    level=logging.INFO,
+    filename='logs.log',
+    filemode='w'
+)
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.StreamHandler(sys.stdout))
 
@@ -30,7 +33,7 @@ CHAT_OBJECT = {
 CHAT_HISTORY = [CHAT_OBJECT]
 GREETING_MESSAGE = (
     f' Задавай мне любые вопросы!'
-    f' Очистить историю поиска можно командой /reset.'
+    f' Очистить историю чата можно командой /reset.'
     f' Посмотреть остаток токенов после запроса можно командой /tokens'
 )
 MAX_PROMPT_LENGTH = 300
@@ -93,7 +96,8 @@ async def reset(update: Update, context: CallbackContext):
     """Очистка истории чата. Команда /reset."""
     if check_users(update.message.chat.id, ALLOWED_VISITORS):
         global SUM_TOKENS
-        logger.info(f'История чата была очищена.')
+        logger.info(f'Пользователь {update.message.chat.first_name}'
+                    'очистил историю своего чата.')
         reset_messages(CHAT_HISTORY, CHAT_OBJECT)
         SUM_TOKENS = 0
         await update.message.reply_text('История чата была очищена.')
@@ -106,10 +110,10 @@ async def count_tokens(update: Update, context: CallbackContext):
     if check_users(update.message.chat.id, ALLOWED_VISITORS):
         logger.info(f'Пользователь {update.message.chat.first_name}'
                     f' запросил остаток токенов:'
-                    f' {TOTAL_TOKENS - SUM_TOKENS}')
+                    f' {TOTAL_TOKENS - MAX_COMPLETION_LENGTH - SUM_TOKENS}')
         await update.message.reply_text(
             f'Ваш остаток токенов:'
-            f'{TOTAL_TOKENS -MAX_COMPLETION_LENGTH - SUM_TOKENS}',
+            f'{TOTAL_TOKENS - MAX_COMPLETION_LENGTH - SUM_TOKENS}',
         )
     else:
         await update.message.reply_text(AUTHORIZATION_ERROR_MESSAGE)
@@ -141,13 +145,14 @@ async def get_answer_from_chatgpt(update: Update, context: CallbackContext):
             update_history(CHAT_HISTORY, 'assistant',
                            response.choices[0].message.content)
             SUM_TOKENS += response['usage']['total_tokens']
+            print(CHAT_HISTORY)
             if SUM_TOKENS >= TOTAL_TOKENS - MAX_COMPLETION_LENGTH:
                 await update.message.reply_text(
                     'Вы использовали слишком много токенов!'
-                    ' История чата будет очищена.'
+                    ' Старые сообщения будут удалены.'
                 )
-                reset_messages(CHAT_HISTORY, CHAT_OBJECT)
-                SUM_TOKENS = 0
+                delete_old_message(CHAT_HISTORY)
+                SUM_TOKENS = response['usage']['total_tokens']
             logger.info(f'Получен ответ от бота:'
                         f' {response.choices[0].message.content}')
             return await update.message.reply_text(
@@ -158,7 +163,7 @@ async def get_answer_from_chatgpt(update: Update, context: CallbackContext):
             reset_messages(CHAT_HISTORY, CHAT_OBJECT)
             SUM_TOKENS = 0
             await update.message.reply_text(
-                'Ошибка! История чата будет очищена!'
+                'Ошибка OpenAI! История чата будет очищена!'
                 ' Попробуйте повторить запрос.'
             )
     else:

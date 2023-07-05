@@ -24,7 +24,10 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO)
+    level=logging.INFO,
+    filename='logs.log',
+    filemode='w'
+)
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.StreamHandler(sys.stdout))
 

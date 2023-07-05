@@ -29,3 +29,10 @@ def reset_messages(chat_history, chat_object):
     """Вспомогательная функция для очистки истории чата."""
     chat_history.clear()
     chat_history.append(chat_object)
+
+
+def delete_old_message(chat_history):
+    """Вспомогательная функция для удаления
+    старых сообщений в истории чата.
+    """
+    del chat_history[1:-2]
