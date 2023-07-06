@@ -7,7 +7,8 @@ import openai
 from telegram import ReplyKeyboardMarkup, Update
 from telegram.ext import CallbackContext, ConversationHandler
 
-from utils import check_users, count_num_tokens, reset_messages, update_history, delete_old_message
+from utils import (check_users, count_num_tokens, reset_messages,
+                   update_history, delete_old_message)
 
 
 load_dotenv()
@@ -32,9 +33,9 @@ CHAT_OBJECT = {
 }
 CHAT_HISTORY = [CHAT_OBJECT]
 GREETING_MESSAGE = (
-    f' Задавай мне любые вопросы!'
-    f' Очистить историю чата можно командой /reset.'
-    f' Посмотреть остаток токенов после запроса можно командой /tokens'
+    ' Задавай мне любые вопросы!'
+    ' Очистить историю чата можно командой /reset.'
+    ' Посмотреть остаток токенов после запроса можно командой /tokens'
 )
 MAX_PROMPT_LENGTH = 300
 MAX_COMPLETION_LENGTH = 3000
@@ -62,7 +63,7 @@ async def start(update: Update, context: CallbackContext):
             )
         else:
             await update.message.reply_text(
-                f'Введите пароль!'
+                'Введите пароль!'
             )
             return PASSWORD
 
@@ -72,7 +73,7 @@ async def enter_password(update: Update, context: CallbackContext):
     password = update.message.text
     if password == SECRET_PASSWORD:
         logger.info(f'Пользователь {update.message.chat.first_name}'
-                        f' начал работу с ботом.')
+                    f' начал работу с ботом.')
         ALLOWED_VISITORS.append(update.message.chat.id)
         button = ReplyKeyboardMarkup(
             [['/reset', '/tokens']], resize_keyboard=True
@@ -86,9 +87,9 @@ async def enter_password(update: Update, context: CallbackContext):
         return ConversationHandler.END
     else:
         logger.info(f'Пользователь {update.message.chat.first_name}'
-                        f' ввёл неверный пароль.')
+                    f' ввёл неверный пароль.')
         await update.message.reply_text(
-        'Пароль неверный. Вы не можете пользоваться ботом.'
+            'Пароль неверный. Вы не можете пользоваться ботом.'
         )
 
 
@@ -97,7 +98,7 @@ async def reset(update: Update, context: CallbackContext):
     if check_users(update.message.chat.id, ALLOWED_VISITORS):
         global SUM_TOKENS
         logger.info(f'Пользователь {update.message.chat.first_name}'
-                    'очистил историю своего чата.')
+                    ' очистил историю своего чата.')
         reset_messages(CHAT_HISTORY, CHAT_OBJECT)
         SUM_TOKENS = 0
         await update.message.reply_text('История чата была очищена.')
@@ -126,17 +127,21 @@ async def get_answer_from_chatgpt(update: Update, context: CallbackContext):
             global SUM_TOKENS
             if count_num_tokens(update.message.text,
                                 'cl100k_base') >= MAX_PROMPT_LENGTH:
-                logger.info(f'Пользователь {update.message.chat.first_name}'
-                        f' отправил слишком длинный запрос боту.'
-                        f' Пользователю отправлено предупреждение.')
+                logger.info(
+                    f'Пользователь {update.message.chat.first_name}'
+                    f' отправил слишком длинный запрос боту.'
+                    f' Пользователю отправлено предупреждение.'
+                )
                 return await update.message.reply_text(
                     'Вы использовали слишком много токенов.'
                     ' Сократите запрос.'
                 )
             update_history(CHAT_HISTORY, 'user', update.message.text)
-            logger.info(f'Пользователь {update.message.chat.first_name}'
-                        f' отправил запрос боту:'
-                        f' {update.message.text}')
+            logger.info(
+                f'Пользователь {update.message.chat.first_name}'
+                f' отправил запрос боту:'
+                f' {update.message.text}'
+            )
             response = openai.ChatCompletion.create(
                 model=MODEL,
                 messages=CHAT_HISTORY,

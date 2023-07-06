@@ -14,7 +14,8 @@ def check_users(user_id, user_list):
 
 def count_num_tokens(string, encoding_name):
     """Вспомогательная функция для подсчёта токенов в тексте,
-    который вводит пользователь."""
+    который вводит пользователь.
+    """
     encoding = tiktoken.get_encoding(encoding_name)
     num_tokens = len(encoding.encode(string))
     return num_tokens
