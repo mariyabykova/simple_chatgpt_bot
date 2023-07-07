@@ -25,20 +25,12 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.StreamHandler(sys.stdout))
 
 
-# AUTHORIZATION_ERROR_MESSAGE = ('Вы не имеете права пользоваться ботом.'
-#                                ' Выполните команду /start,'
-#                                ' а затем введите пароль.')
 ALLOWED_VISITORS = []
 CHAT_OBJECT = {
     'role': 'system',
     'content': 'You are a bot-assistant'
 }
 CHAT_HISTORY = [CHAT_OBJECT]
-# GREETING_MESSAGE = (
-#     ' Задавай мне любые вопросы!'
-#     ' Очистить историю чата можно командой /reset.'
-#     ' Посмотреть остаток токенов после запроса можно командой /tokens'
-# )
 MAX_PROMPT_LENGTH = 300
 MAX_COMPLETION_LENGTH = 3000
 MODEL = 'gpt-3.5-turbo'
