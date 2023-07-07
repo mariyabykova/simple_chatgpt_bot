@@ -7,6 +7,8 @@ import openai
 from telegram import ReplyKeyboardMarkup, Update
 from telegram.ext import CallbackContext, ConversationHandler
 
+from messages_constants import (AUTHORIZATION_ERROR_MESSAGE, GREETING_MESSAGE,
+                                INFORMATION_MESSAGE)
 from utils import (check_users, count_num_tokens, reset_messages,
                    update_history, delete_old_message)
 
@@ -23,20 +25,20 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.StreamHandler(sys.stdout))
 
 
-AUTHORIZATION_ERROR_MESSAGE = ('Вы не имеете права пользоваться ботом.'
-                               ' Выполните команду /start,'
-                               ' а затем введите пароль.')
+# AUTHORIZATION_ERROR_MESSAGE = ('Вы не имеете права пользоваться ботом.'
+#                                ' Выполните команду /start,'
+#                                ' а затем введите пароль.')
 ALLOWED_VISITORS = []
 CHAT_OBJECT = {
     'role': 'system',
     'content': 'You are a bot-assistant'
 }
 CHAT_HISTORY = [CHAT_OBJECT]
-GREETING_MESSAGE = (
-    ' Задавай мне любые вопросы!'
-    ' Очистить историю чата можно командой /reset.'
-    ' Посмотреть остаток токенов после запроса можно командой /tokens'
-)
+# GREETING_MESSAGE = (
+#     ' Задавай мне любые вопросы!'
+#     ' Очистить историю чата можно командой /reset.'
+#     ' Посмотреть остаток токенов после запроса можно командой /tokens'
+# )
 MAX_PROMPT_LENGTH = 300
 MAX_COMPLETION_LENGTH = 3000
 MODEL = 'gpt-3.5-turbo'
@@ -53,7 +55,7 @@ async def start(update: Update, context: CallbackContext):
             logger.info(f'Пользователь {update.message.chat.first_name}'
                         f' начал работу с ботом.')
             button = ReplyKeyboardMarkup(
-                [['/reset', '/tokens']], resize_keyboard=True
+                [['/reset', '/tokens', '/information']], resize_keyboard=True
             )
             await update.message.reply_text(
                 f'Привет, {update.message.chat.first_name}!'
@@ -76,7 +78,7 @@ async def enter_password(update: Update, context: CallbackContext):
                     f' начал работу с ботом.')
         ALLOWED_VISITORS.append(update.message.chat.id)
         button = ReplyKeyboardMarkup(
-            [['/reset', '/tokens']], resize_keyboard=True
+            [['/reset', '/tokens', '/information']], resize_keyboard=True
         )
         await update.message.reply_text(
             f'Пароль верный. Я готов к работе с тобой,'
@@ -91,6 +93,17 @@ async def enter_password(update: Update, context: CallbackContext):
         await update.message.reply_text(
             'Пароль неверный. Вы не можете пользоваться ботом.'
         )
+
+
+async def get_informaion(update: Update, context: CallbackContext):
+    if check_users(update.message.chat.id, ALLOWED_VISITORS):
+        logger.info(f'Пользователь {update.message.chat.first_name}'
+                    ' запросил информацию о боте.')
+        await update.message.reply_text(
+            INFORMATION_MESSAGE.format(max_tokens=(TOTAL_TOKENS - MAX_COMPLETION_LENGTH))
+        )
+    else:
+        await update.message.reply_text(AUTHORIZATION_ERROR_MESSAGE)   
 
 
 async def reset(update: Update, context: CallbackContext):

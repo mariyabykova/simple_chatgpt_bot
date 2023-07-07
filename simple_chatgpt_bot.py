@@ -10,6 +10,7 @@ from telegram.ext import (ApplicationBuilder, ConversationHandler,
 
 from commands import (count_tokens, enter_password,
                       get_answer_from_chatgpt,
+                      get_informaion,
                       reset, start,
                       PASSWORD)
 from utils import check_tokens
@@ -47,6 +48,7 @@ def main():
     ))
     application.add_handler(CommandHandler('reset', reset))
     application.add_handler(CommandHandler('tokens', count_tokens))
+    application.add_handler(CommandHandler('information', get_informaion))
     application.add_handler(MessageHandler(
         filters.TEXT & ~filters.COMMAND,
         get_answer_from_chatgpt,
