@@ -35,6 +35,7 @@ MAX_PROMPT_LENGTH = 300
 MAX_COMPLETION_LENGTH = 3000
 MODEL = 'gpt-3.5-turbo'
 PASSWORD = 0
+SEARCH = 0
 SECRET_PASSWORD = os.getenv('SECRET_PASSWORD')
 SUM_TOKENS = 0
 TOTAL_TOKENS = 4000
@@ -47,7 +48,8 @@ async def start(update: Update, context: CallbackContext):
             logger.info(f'Пользователь {update.message.chat.first_name}'
                         f' начал работу с ботом.')
             button = ReplyKeyboardMarkup(
-                [['/reset', '/tokens', '/information']], resize_keyboard=True
+                [['/reset', '/tokens', '/information', '/search']],
+                resize_keyboard=True
             )
             await update.message.reply_text(
                 f'Привет, {update.message.chat.first_name}!'
@@ -70,7 +72,8 @@ async def enter_password(update: Update, context: CallbackContext):
                     f' начал работу с ботом.')
         ALLOWED_VISITORS.append(update.message.chat.id)
         button = ReplyKeyboardMarkup(
-            [['/reset', '/tokens', '/information']], resize_keyboard=True
+            [['/reset', '/tokens', '/information', '/search']],
+            resize_keyboard=True
         )
         await update.message.reply_text(
             f'Пароль верный. Я готов к работе с тобой,'
@@ -88,11 +91,14 @@ async def enter_password(update: Update, context: CallbackContext):
 
 
 async def get_informaion(update: Update, context: CallbackContext):
+    """Информация о работе бота."""
     if check_users(update.message.chat.id, ALLOWED_VISITORS):
         logger.info(f'Пользователь {update.message.chat.first_name}'
                     ' запросил информацию о боте.')
         await update.message.reply_text(
-            INFORMATION_MESSAGE.format(max_tokens=(TOTAL_TOKENS - MAX_COMPLETION_LENGTH))
+            INFORMATION_MESSAGE.format(
+                max_tokens=(TOTAL_TOKENS - MAX_COMPLETION_LENGTH)
+            )
         )
     else:
         await update.message.reply_text(AUTHORIZATION_ERROR_MESSAGE)   
@@ -121,6 +127,45 @@ async def count_tokens(update: Update, context: CallbackContext):
             f'Ваш остаток токенов:'
             f'{TOTAL_TOKENS - MAX_COMPLETION_LENGTH - SUM_TOKENS}',
         )
+    else:
+        await update.message.reply_text(AUTHORIZATION_ERROR_MESSAGE)
+
+
+async def search_word(update: Update, context: CallbackContext):
+    """Команда /search – пользователю предлагается ввести слово или фразу,
+    которые он хочет найти в истории чата.
+    """
+    if check_users(update.message.chat.id, ALLOWED_VISITORS):
+        await update.message.reply_text(
+                'Введите слово или фразу, которую нужно найти.'
+            )
+        return SEARCH
+    else:
+        await update.message.reply_text(AUTHORIZATION_ERROR_MESSAGE)
+
+
+async def find_word(update: Update, context: CallbackContext):
+    """Отправка пользователю сообщений из истории чата,
+    в которых найдены искомые слова.
+    """
+    if check_users(update.message.chat.id, ALLOWED_VISITORS):
+        word = update.message.text
+        find_index = 0
+        for element in CHAT_HISTORY:
+            result_answer = (element.get('content')).lower()
+            result_author = element.get('role')
+            if word in result_answer:
+                await update.message.reply_text(
+                    f'Слово найдено в сообщении'
+                    f' от пользователя {result_author}:'
+                    f' {result_answer}'
+                )
+                find_index = 1
+        if find_index == 0:
+            await update.message.reply_text(
+                'Слово не найдено.'
+            )
+        return ConversationHandler.END
     else:
         await update.message.reply_text(AUTHORIZATION_ERROR_MESSAGE)
 
@@ -155,7 +200,6 @@ async def get_answer_from_chatgpt(update: Update, context: CallbackContext):
             update_history(CHAT_HISTORY, 'assistant',
                            response.choices[0].message.content)
             SUM_TOKENS += response['usage']['total_tokens']
-            print(CHAT_HISTORY)
             if SUM_TOKENS >= TOTAL_TOKENS - MAX_COMPLETION_LENGTH:
                 await update.message.reply_text(
                     'Вы использовали слишком много токенов!'

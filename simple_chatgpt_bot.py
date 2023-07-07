@@ -9,10 +9,11 @@ from telegram.ext import (ApplicationBuilder, ConversationHandler,
                           filters, MessageHandler)
 
 from commands import (count_tokens, enter_password,
+                      find_word, search_word,
                       get_answer_from_chatgpt,
                       get_informaion,
                       reset, start,
-                      PASSWORD)
+                      PASSWORD, SEARCH)
 from utils import check_tokens
 
 
@@ -49,6 +50,13 @@ def main():
     application.add_handler(CommandHandler('reset', reset))
     application.add_handler(CommandHandler('tokens', count_tokens))
     application.add_handler(CommandHandler('information', get_informaion))
+    application.add_handler(ConversationHandler(
+        entry_points=[CommandHandler('search', search_word)],
+        states={SEARCH: [
+            MessageHandler(filters.TEXT & ~filters.COMMAND, find_word)
+        ]},
+        fallbacks=[]
+    ))
     application.add_handler(MessageHandler(
         filters.TEXT & ~filters.COMMAND,
         get_answer_from_chatgpt,
