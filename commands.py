@@ -101,7 +101,7 @@ async def get_informaion(update: Update, context: CallbackContext):
             )
         )
     else:
-        await update.message.reply_text(AUTHORIZATION_ERROR_MESSAGE)   
+        await update.message.reply_text(AUTHORIZATION_ERROR_MESSAGE)
 
 
 async def reset(update: Update, context: CallbackContext):
