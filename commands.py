@@ -137,7 +137,8 @@ async def search_word(update: Update, context: CallbackContext):
     """
     if check_users(update.message.chat.id, ALLOWED_VISITORS):
         await update.message.reply_text(
-                'Введите слово или фразу, которую нужно найти.'
+                'Введите слово или фразу, которую нужно найти'
+                ' в истории сообщений.'
             )
         return SEARCH
     else:
