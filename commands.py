@@ -165,7 +165,7 @@ async def find_word(update: Update, context: CallbackContext):
                 author=result_author,
                 answer=result_answer
             )
-            if word in result_answer:
+            if word.lower() in result_answer:
                 logger.info(
                     f'Бот отправил пользователю'
                     f' {update.message.chat.first_name}'
