@@ -8,7 +8,7 @@ from telegram import ReplyKeyboardMarkup, Update
 from telegram.ext import CallbackContext, ConversationHandler
 
 from messages_constants import (AUTHORIZATION_ERROR_MESSAGE, GREETING_MESSAGE,
-                                INFORMATION_MESSAGE)
+                                INFORMATION_MESSAGE, SEARCH_MESSAGE)
 from utils import (check_users, count_num_tokens, reset_messages,
                    update_history, delete_old_message)
 
@@ -32,7 +32,7 @@ CHAT_OBJECT = {
 }
 CHAT_HISTORY = [CHAT_OBJECT]
 MAX_PROMPT_LENGTH = 300
-MAX_COMPLETION_LENGTH = 3000
+MAX_COMPLETION_LENGTH = 2000
 MODEL = 'gpt-3.5-turbo'
 PASSWORD = 0
 SEARCH = 0
@@ -97,6 +97,7 @@ async def get_informaion(update: Update, context: CallbackContext):
                     ' запросил информацию о боте.')
         await update.message.reply_text(
             INFORMATION_MESSAGE.format(
+                model=MODEL,
                 max_tokens=(TOTAL_TOKENS - MAX_COMPLETION_LENGTH)
             )
         )
@@ -136,6 +137,8 @@ async def search_word(update: Update, context: CallbackContext):
     которые он хочет найти в истории чата.
     """
     if check_users(update.message.chat.id, ALLOWED_VISITORS):
+        logger.info(f'Пользователь {update.message.chat.first_name}'
+                    f' выполнил команду search.')
         await update.message.reply_text(
                 'Введите слово или фразу, которую нужно найти'
                 ' в истории сообщений.'
@@ -155,16 +158,30 @@ async def find_word(update: Update, context: CallbackContext):
         for element in CHAT_HISTORY:
             result_answer = (element.get('content')).lower()
             result_author = element.get('role')
+            if result_author == 'user':
+                result_author = update.message.chat.first_name
+            search_message = SEARCH_MESSAGE.format(
+                word=word,
+                author=result_author,
+                answer=result_answer
+            )
             if word in result_answer:
-                await update.message.reply_text(
-                    f'Слово найдено в сообщении'
-                    f' от пользователя {result_author}:'
-                    f' {result_answer}'
+                logger.info(
+                    f'Бот отправил пользователю'
+                    f' {update.message.chat.first_name}'
+                    f' сообщение: {search_message}',
                 )
+                await update.message.reply_text(search_message)
                 find_index = 1
         if find_index == 0:
+            logger.info(
+                    f'Бот отправил пользователю'
+                    f' {update.message.chat.first_name} сообщение:'
+                    f' Слово {word} не найдено в истории чата.'
+
+                )
             await update.message.reply_text(
-                'Слово не найдено.'
+                f'Слово {word} не найдено в истории чата.'
             )
         return ConversationHandler.END
     else:
