@@ -72,7 +72,7 @@ async def enter_password(update: Update, context: CallbackContext):
                     f' начал работу с ботом.')
         ALLOWED_VISITORS.append(update.message.chat.id)
         ALL_HISTORY[update.message.chat.id] = [
-            [{'role': 'system', 'content': 'You are a bot-assistant'}],
+            [CHAT_OBJECT],
             SUM_TOKENS
         ]
         button = ReplyKeyboardMarkup(
@@ -112,7 +112,6 @@ async def get_informaion(update: Update, context: CallbackContext):
 async def reset(update: Update, context: CallbackContext):
     """Очистка истории чата. Команда /reset."""
     if check_users(update.message.chat.id, ALLOWED_VISITORS):
-        # global ALL_HISTORY
         personal_history = ALL_HISTORY[update.message.chat.id]
         logger.info(f'Пользователь {update.message.chat.first_name}'
                     ' очистил историю своего чата.')
@@ -127,9 +126,11 @@ async def count_tokens(update: Update, context: CallbackContext):
     """Подсчёт количества оставшихся токенов. Команда /tokens"""
     if check_users(update.message.chat.id, ALLOWED_VISITORS):
         personal_history = ALL_HISTORY[update.message.chat.id]
-        logger.info(f'Пользователь {update.message.chat.first_name}'
-                    f' запросил остаток токенов:'
-                    f' {TOTAL_TOKENS - MAX_COMPLETION_LENGTH - personal_history[1]}')
+        logger.info(
+            f'Пользователь {update.message.chat.first_name}'
+            f' запросил остаток токенов:'
+            f' {TOTAL_TOKENS - MAX_COMPLETION_LENGTH - personal_history[1]}'
+        )
         await update.message.reply_text(
             f'Ваш остаток токенов:'
             f'{TOTAL_TOKENS - MAX_COMPLETION_LENGTH - personal_history[1]}',
@@ -232,10 +233,9 @@ async def get_answer_from_chatgpt(update: Update, context: CallbackContext):
                 )
                 delete_old_message(personal_history[0])
                 personal_history[1] = response['usage']['total_tokens']
-            logger.info(f'Получен ответ от бота:'
-                        f' {response.choices[0].message.content}'
-                        f' Моя история {personal_history}'
-                        f' Вся история {ALL_HISTORY}')
+            logger.info(f'Пользователь {update.message.chat.first_name}'
+                        f' получил ответ от бота:'
+                        f' {response.choices[0].message.content}')
             return await update.message.reply_text(
                 response.choices[0].message.content
             )
