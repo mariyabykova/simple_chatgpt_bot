@@ -26,11 +26,11 @@ logger.addHandler(logging.StreamHandler(sys.stdout))
 
 
 ALLOWED_VISITORS = []
+ALL_HISTORY = {}
 CHAT_OBJECT = {
     'role': 'system',
     'content': 'You are a bot-assistant'
 }
-CHAT_HISTORY = [CHAT_OBJECT]
 MAX_PROMPT_LENGTH = 300
 MAX_COMPLETION_LENGTH = 2000
 MODEL = 'gpt-3.5-turbo'
@@ -71,6 +71,10 @@ async def enter_password(update: Update, context: CallbackContext):
         logger.info(f'Пользователь {update.message.chat.first_name}'
                     f' начал работу с ботом.')
         ALLOWED_VISITORS.append(update.message.chat.id)
+        ALL_HISTORY[update.message.chat.id] = [
+            [{'role': 'system', 'content': 'You are a bot-assistant'}],
+            SUM_TOKENS
+        ]
         button = ReplyKeyboardMarkup(
             [['/reset', '/tokens', '/information', '/search']],
             resize_keyboard=True
@@ -108,11 +112,12 @@ async def get_informaion(update: Update, context: CallbackContext):
 async def reset(update: Update, context: CallbackContext):
     """Очистка истории чата. Команда /reset."""
     if check_users(update.message.chat.id, ALLOWED_VISITORS):
-        global SUM_TOKENS
+        # global ALL_HISTORY
+        personal_history = ALL_HISTORY[update.message.chat.id]
         logger.info(f'Пользователь {update.message.chat.first_name}'
                     ' очистил историю своего чата.')
-        reset_messages(CHAT_HISTORY, CHAT_OBJECT)
-        SUM_TOKENS = 0
+        reset_messages(personal_history[0], CHAT_OBJECT)
+        personal_history[1] = 0
         await update.message.reply_text('История чата была очищена.')
     else:
         await update.message.reply_text(AUTHORIZATION_ERROR_MESSAGE)
@@ -121,12 +126,13 @@ async def reset(update: Update, context: CallbackContext):
 async def count_tokens(update: Update, context: CallbackContext):
     """Подсчёт количества оставшихся токенов. Команда /tokens"""
     if check_users(update.message.chat.id, ALLOWED_VISITORS):
+        personal_history = ALL_HISTORY[update.message.chat.id]
         logger.info(f'Пользователь {update.message.chat.first_name}'
                     f' запросил остаток токенов:'
-                    f' {TOTAL_TOKENS - MAX_COMPLETION_LENGTH - SUM_TOKENS}')
+                    f' {TOTAL_TOKENS - MAX_COMPLETION_LENGTH - personal_history[1]}')
         await update.message.reply_text(
             f'Ваш остаток токенов:'
-            f'{TOTAL_TOKENS - MAX_COMPLETION_LENGTH - SUM_TOKENS}',
+            f'{TOTAL_TOKENS - MAX_COMPLETION_LENGTH - personal_history[1]}',
         )
     else:
         await update.message.reply_text(AUTHORIZATION_ERROR_MESSAGE)
@@ -155,7 +161,8 @@ async def find_word(update: Update, context: CallbackContext):
     if check_users(update.message.chat.id, ALLOWED_VISITORS):
         word = update.message.text
         find_index = 0
-        for element in CHAT_HISTORY:
+        personal_history = ALL_HISTORY[update.message.chat.id]
+        for element in personal_history[0]:
             result_answer = (element.get('content')).lower()
             result_author = element.get('role')
             if result_author == 'user':
@@ -192,7 +199,6 @@ async def get_answer_from_chatgpt(update: Update, context: CallbackContext):
     """Обработка ответа от ChatGPT."""
     if check_users(update.message.chat.id, ALLOWED_VISITORS):
         try:
-            global SUM_TOKENS
             if count_num_tokens(update.message.text,
                                 'cl100k_base') >= MAX_PROMPT_LENGTH:
                 logger.info(
@@ -204,7 +210,8 @@ async def get_answer_from_chatgpt(update: Update, context: CallbackContext):
                     'Вы использовали слишком много токенов.'
                     ' Сократите запрос.'
                 )
-            update_history(CHAT_HISTORY, 'user', update.message.text)
+            personal_history = ALL_HISTORY[update.message.chat.id]
+            update_history(personal_history[0], 'user', update.message.text)
             logger.info(
                 f'Пользователь {update.message.chat.first_name}'
                 f' отправил запрос боту:'
@@ -212,28 +219,31 @@ async def get_answer_from_chatgpt(update: Update, context: CallbackContext):
             )
             response = openai.ChatCompletion.create(
                 model=MODEL,
-                messages=CHAT_HISTORY,
+                messages=personal_history[0],
                 max_tokens=MAX_COMPLETION_LENGTH,
             )
-            update_history(CHAT_HISTORY, 'assistant',
+            update_history(personal_history[0], 'assistant',
                            response.choices[0].message.content)
-            SUM_TOKENS += response['usage']['total_tokens']
-            if SUM_TOKENS >= TOTAL_TOKENS - MAX_COMPLETION_LENGTH:
+            personal_history[1] += response['usage']['total_tokens']
+            if personal_history[1] >= TOTAL_TOKENS - MAX_COMPLETION_LENGTH:
                 await update.message.reply_text(
                     'Вы использовали слишком много токенов!'
                     ' Старые сообщения будут удалены.'
                 )
-                delete_old_message(CHAT_HISTORY)
-                SUM_TOKENS = response['usage']['total_tokens']
+                delete_old_message(personal_history[0])
+                personal_history[1] = response['usage']['total_tokens']
             logger.info(f'Получен ответ от бота:'
-                        f' {response.choices[0].message.content}')
+                        f' {response.choices[0].message.content}'
+                        f' Моя история {personal_history}'
+                        f' Вся история {ALL_HISTORY}')
             return await update.message.reply_text(
                 response.choices[0].message.content
             )
         except Exception as error:
             logger.error(f'{error}')
-            reset_messages(CHAT_HISTORY, CHAT_OBJECT)
-            SUM_TOKENS = 0
+            personal_history = ALL_HISTORY[update.message.chat.id]
+            reset_messages(personal_history[0], CHAT_OBJECT)
+            personal_history[1] = 0
             await update.message.reply_text(
                 'Ошибка OpenAI! История чата будет очищена!'
                 ' Попробуйте повторить запрос.'
